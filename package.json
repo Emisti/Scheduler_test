@@ -1,0 +1,59 @@
+{
+    "name": "horsa-scheduler",
+    "version": "0.5.0",
+    "description": "A lightweight and interactive svg scheduler library for web applications",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "rollup -c -w",
+        "build": "rollup -c",
+        "test": "jest",
+        "release": "release-it --no-increment"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/horsa-way/scheduler.git"
+    },
+    "files": [
+        "src",
+        "dist",
+        "README.md"
+    ],
+    "keywords": [
+        "scheduler",
+        "gantt",
+        "svg",
+        "simple gantt",
+        "project timeline",
+        "interactive gantt",
+        "project management"
+    ],
+    "author": "Horsa Way",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/horsa-way/scheduler/issues"
+    },
+    "homepage": "https://github.com/horsa-way/scheduler",
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org"
+    },    
+    "devDependencies": {
+        "@rollup/plugin-terser": "^0.4.4",
+        "jest": "^22.2.1",
+        "release-it": "^17.0.0",
+        "rollup": "^2.70.2",
+        "rollup-plugin-sass": "^1.2.12"
+    },
+    "release-it": {
+        "git": {
+            "requireBranch": "master",
+            "tagName": "v${version}"
+        },
+        "npm": {
+            "publish": false
+        },
+        "github": {
+            "release": true,
+            "assets": ["dist/*"]
+        }
+    }
+}
