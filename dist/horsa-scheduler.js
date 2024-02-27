@@ -676,6 +676,11 @@ var Scheduler = (function () {
                 x_in_units * this.scheduler.options.step,
                 'hour'
             );
+
+            if (new_start_date.getHours() !== 0 && this.scheduler.options.view_mode !== 'Hour') {
+                new_start_date.setHours(0);
+            }
+
             const width_in_units = bar.getWidth() / this.scheduler.options.column_width;
             const new_end_date = date_utils.add(
                 new_start_date,
@@ -1126,6 +1131,7 @@ var Scheduler = (function () {
                 rows: [],
                 overlap: true,
                 moving_scroll_bar: true,
+                hide_fixed_columns: false,
             };
             this.options = Object.assign({}, default_options, options);
 
@@ -1398,6 +1404,10 @@ var Scheduler = (function () {
 
         // TODO refactor with single functions?
         make_fixed_columns() {
+            if (this.options.hide_fixed_columns) {
+                this.$column_svg.setAttribute('width', 0);
+                return;
+            }
             // make_grid_background
             const column_grid_width = this.options.fixed_columns.length * this.options.fixed_column_width;
             const sum_rows_height = this.rows[this.rows.length - 1].y + this.rows[this.rows.length - 1].height;
@@ -1981,7 +1991,7 @@ var Scheduler = (function () {
                 is_resizing_left = is_resizing_left && this.bar_being_dragged.task.resize_left;
                 is_resizing_right = is_resizing_right && this.bar_being_dragged.task.resize_right;
                 is_dragging = is_dragging && (this.bar_being_dragged.task.drag_drop_x || this.bar_being_dragged.task.drag_drop_y);
-                max_y = this.rows[this.rows.length - 1].y + this.rows[this.rows.length - 1].height + this.options.bar_height;
+                max_y = this.rows[this.rows.length - 1].y + this.rows[this.rows.length - 1].height - this.options.bar_height - (this.options.padding / 2);
             });
 
             $.on(this.$svg, 'mousemove', (e) => {
@@ -2072,7 +2082,7 @@ var Scheduler = (function () {
                             bar.position_changed();
                             bar.set_action_completed();
                             if (this.options.overlap) {
-                                this.overlap(start_row_index, bar.task._index, $bar.finaldx, $bar.finaldy);
+                                this.overlap(start_row_index, bar.task._index);
                             }
                         }
                     });
@@ -2179,27 +2189,11 @@ var Scheduler = (function () {
             });
         }
 
-        overlap(start_row_index, end_row_index, finaldx, finaldy) {
+        overlap(start_row_index, end_row_index) {
             let render = false;
 
             const end_row = this.rows[end_row_index];
             const new_end_sub_level = this.compute_row_sub_level(end_row.id);
-            // if ((finaldy != 0 && (new_end_sub_level.length === end_row.sub_level.length)) ||
-            //     (finaldx != 0 && ((new_end_sub_level.length === end_row.sub_level.length) && (new_end_sub_level !== end_row.sub_level)))) {
-            //     end_row.sub_level = new_end_sub_level;
-            //     end_row.height = this.compute_row_height(end_row.sub_level.length);
-            //     render = true;
-            // }
-
-            // if (start_row_index != end_row_index) {
-            //     const start_row = this.rows[start_row_index];
-            //     const new_start_sub_level = this.compute_row_sub_level(start_row.id);
-            //     if ((new_start_sub_level.length != 0 && (new_start_sub_level.length != start_row.sub_level.length))) {
-            //         start_row.sub_level = new_start_sub_level;
-            //         start_row.height = this.compute_row_height(start_row.sub_level.length);
-            //         render = true;
-            //     }
-            // }
             if (new_end_sub_level !== end_row.sub_level) {
                 end_row.sub_level = new_end_sub_level;
                 end_row.height = this.compute_row_height(end_row.sub_level.length);
@@ -2233,7 +2227,7 @@ var Scheduler = (function () {
             var viewportX = e.clientX;
             var viewportY = e.clientY;
             //edges del container
-            var edgeTop = this.$container.offsetTop + this.options.header_height + this.options.padding + (this.options.padding / 2);
+            var edgeTop = this.$container.offsetTop + this.options.header_height + (this.options.padding * 4);
             var edgeLeft = this.$container.offsetLeft + this.options.fixed_column_width * 2;
             var edgeBottom = this.$container.offsetHeight;
             var edgeRight = this.$container.offsetWidth;
@@ -2242,71 +2236,65 @@ var Scheduler = (function () {
             var isInRightEdge = (viewportX > edgeRight);
             var isInTopEdge = (viewportY < edgeTop);
             var isInBottomEdge = (viewportY > edgeBottom);
-            // If the mouse is not in the viewport edge, there's no need to calculate
-            // anything else.
-
             //I massimi sono larghezza e atezza del container
             var maxScrollX = this.$container.scrollWidth;
-            var maxScrollY = this.$container.scrollHeight - this.$container.offsetHeight - this.options.padding;
+            var maxScrollY = this.$container.scrollHeight - this.$container.offsetHeight;
             // Get the current scroll position of the document.(container)
             var currentScrollX = this.$container.scrollLeft;
             var currentScrollY = this.$container.scrollTop;
-            // As we examine the mousemove event, we want to adjust the window scroll in
-            // immediate response to the event; but, we also want to continue adjusting
-            // the window scroll if the user rests their mouse in the edge boundary. To
-            // do this, we'll invoke the adjustment logic immediately.
-            (function checkForWindowScroll() {
-                if (adjustWindowScroll(currentScrollX, currentScrollY)) ;
-            })();
-            // Adjust the window scroll based on the user's mouse position. Returns True
-            // or False depending on whether or not the window scroll was changed.
-            function adjustWindowScroll(currentScrollX, currentScrollY) {
-                // Determine if the window can be scrolled in any particular direction.
-                var canScrollUp = (currentScrollY > 0);
-                var canScrollDown = (currentScrollY < maxScrollY);
-                var canScrollLeft = (currentScrollX > 0);
-                var canScrollRight = (currentScrollX < maxScrollX);
+            // Determine if the window can be scrolled in any particular direction.
+            var canScrollUp = (currentScrollY > 0);
+            var canScrollDown = (currentScrollY < maxScrollY);
+            var canScrollLeft = (currentScrollX > 0);
+            var canScrollRight = (currentScrollX < maxScrollX);
 
-                var nextScrollX = currentScrollX;
-                var nextScrollY = currentScrollY;
+            var nextScrollX = currentScrollX;
+            var nextScrollY = currentScrollY;
 
-                //Serve a calcolare la velocità con cui scrollare
-                var maxStep = 30;
+            //Serve a calcolare la velocità con cui scrollare
+            var maxStep = 30;
 
-                // Should we scroll left?
-                if (isInLeftEdge && canScrollLeft) {
-                    var intensity = ((edgeLeft - viewportX) / edgeLeft);
-                    nextScrollX = (nextScrollX - (maxStep * intensity));
-                    // Should we scroll right?
-                } else if (isInRightEdge && canScrollRight) {
-                    var intensity = ((viewportX - edgeRight) / edgeLeft);
-                    nextScrollX = (nextScrollX + (maxStep * intensity));
-                }
-
-                // Should we scroll up?
-                if (isInTopEdge && canScrollUp) {
-                    var intensity = ((edgeTop - viewportY) / edgeTop);
-                    nextScrollY = (nextScrollY - (maxStep * intensity));
-                    // Should we scroll down?
-                } else if (isInBottomEdge && canScrollDown) {
-                    var intensity = ((viewportY - edgeBottom) / edgeTop);
-                    nextScrollY = (nextScrollY + (maxStep * intensity));
-                }
-
-                nextScrollX = Math.max(0, Math.min(maxScrollX, nextScrollX));
-                nextScrollY = Math.max(0, Math.min(maxScrollY, nextScrollY));
-
-                if (
-                    (nextScrollX !== currentScrollX) ||
-                    (nextScrollY !== currentScrollY)
-                ) {
-                    scroll_bar.scrollLeft = nextScrollX;
-                    scroll_bar.scrollTop = nextScrollY;
-                    return (true);
-                } else {
-                    return (false);
-                }
+            // Should we scroll left?
+            if (isInLeftEdge && canScrollLeft) {
+                var intensity = ((edgeLeft - viewportX) / edgeLeft);
+                nextScrollX = (nextScrollX - (maxStep * intensity));
+                // Should we scroll right?
+            } else if (isInRightEdge && canScrollRight) {
+                var intensity = ((viewportX - edgeRight) / edgeLeft);
+                nextScrollX = (nextScrollX + (maxStep * intensity));
             }
+
+            // Should we scroll up?
+            if (isInTopEdge && canScrollUp) {
+                var intensity = ((edgeTop - viewportY) / edgeTop);
+                nextScrollY = (nextScrollY - (maxStep * intensity));
+                // Should we scroll down?
+            } else if (isInBottomEdge && canScrollDown) {
+                var intensity = ((viewportY - edgeBottom) / edgeTop);
+                nextScrollY = (nextScrollY + (maxStep * intensity));
+            }
+
+            nextScrollX = Math.max(0, Math.min(maxScrollX, nextScrollX));
+            nextScrollY = Math.max(0, Math.min(maxScrollY, nextScrollY));
+
+            if (
+                (nextScrollX !== currentScrollX) ||
+                (nextScrollY !== currentScrollY)
+            ) {
+                scroll_bar.scrollLeft = nextScrollX;
+                scroll_bar.scrollTop = nextScrollY;
+                return (true);
+            } else {
+                return (false);
+            }
+        }
+
+        hide_fixed_columns() {
+            this.options.hide_fixed_columns = true;
+        }
+
+        show_fixed_columns() {
+            this.options.hide_fixed_columns = false;
         }
 
         get_all_dependent_tasks(task_id) {
