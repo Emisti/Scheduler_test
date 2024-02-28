@@ -1045,7 +1045,7 @@
             on_view_change: (mode) => {
                 console.log(mode);
             },
-            view_mode: 'Day',
+            view_mode: 'Hour',
             language: 'en',
             resize_left: true,
             resize_right: true,
@@ -1130,6 +1130,12 @@
                 this.scheduler_chart.show_fixed_columns();
             }
             this.scheduler_chart.refresh(tasks);
+            if (window.innerWidth <= 600) {
+                let lower_text = this.scheduler_chart.$column_svg.querySelectorAll('g.cell > g.cell-wrapper > text');
+                for (let i = 0; i < lower_text.length; i++) {
+                    lower_text[i].style.fontSize = '8px';
+                }
+            }
         }
     </script>
 </body>
