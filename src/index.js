@@ -1209,6 +1209,7 @@ export default class Scheduler {
             const scrollLeft = this.$container.scrollLeft;
             const scrollTop = this.$container.scrollTop;
             this.render();
+            this
             this.$container.scrollLeft = scrollLeft;
             this.$container.scrollTop = scrollTop;
         }
